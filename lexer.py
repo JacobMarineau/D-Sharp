@@ -1,6 +1,7 @@
 import re
 
-# Token types
+# ====== Token types ======
+
 TOKEN_TYPES = {
     "NOTE": r"note",
     "PLAY": r"play",
@@ -20,7 +21,8 @@ TOKEN_TYPES = {
     "OTHER": r"."
 }
 
-# Lexer function
+# ====== Lexer function ======
+
 def lexer(code):
     tokens = []
     while code:
@@ -40,11 +42,13 @@ def lexer(code):
     return tokens
 
 
-# Read the example D# file
+# ====== Read the example D# file ====== 
+
 with open("program.ds", "r") as file:
     dsharp_code = file.read()
 
-# Tokenize the code
+# ====== Tokenize the code ======
+
 tokens = lexer(dsharp_code)
 for token in tokens:
     print(token)
