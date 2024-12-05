@@ -1,0 +1,7 @@
+note tonic = "C";
+play tonic;
+
+note scale = ["C", "D", "E", "F", "G", "A", "B"];
+repeat 4 times {
+    play scale;
+}
