@@ -16,7 +16,8 @@ play theme;
 chord major = ["C", "E", "G"];
 play chord major;
 
-notation arpeggio(note base) {
+note base = "C";
+notation arpeggio(base) {
     play base;
     play base + 2;
     play base + 4;

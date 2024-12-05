@@ -16,10 +16,11 @@ class Parser:
 
     def peek(self):
         return self.tokens[self.current]
-
+    
     def advance(self):
         token = self.tokens[self.current]
         self.current += 1
+        print(f"Debug: Consumed token {token}")
         return token
 
     def match(self, *token_types):
@@ -35,13 +36,22 @@ class Parser:
         elif self.match("CHORD"):
             return self.assignment("Chord")
         elif self.match("PLAY"):
-            return self.play_statement()
-        elif self.peek()[1] == "notation":  
+            try:
+                return self.play_statement()
+            except SyntaxError as e:
+                print(f"Debug: Skipping invalid play statement. Error: {e}")
+                self.advance()
+                return None
+        elif self.peek()[1] == "notation":
             return self.script_statement()
         elif self.match("REPEAT"):
             return self.repeat_statement()
         else:
-            raise SyntaxError(f"Unexpected token: {self.peek()}")
+            print(f"Debug: Unexpected token {self.peek()}. Skipping...")
+            self.advance()
+            return None
+
+
 
     def assignment(self, type_):
         name = self.match("IDENTIFIER")
@@ -58,7 +68,6 @@ class Parser:
 
     def play_statement(self):
         target_type = None
-
         if self.match("CHORD"):
             target_type = "Chord"
         elif self.match("MELODY"):
@@ -66,17 +75,21 @@ class Parser:
 
         target = self.match("IDENTIFIER")
         if not target:
-            raise SyntaxError(f"Expected an identifier after 'play', found {self.peek()}.")
+            current_token = self.peek()
+            if current_token[0] == "PLAY":
+                print(f"Debug: Found misplaced 'play' keyword. Skipping...")
+                self.advance()
+                return None
+            raise SyntaxError(f"Expected an identifier after 'play', found {current_token}.")
 
         modifier = None
-        operation = []
-
         if self.match("SHARP"):
             modifier = "sharp"
         elif self.match("FLAT"):
             modifier = "flat"
 
-        while self.peek()[1] in {"+", "-"}:
+        operation = []
+        while not self.is_at_end() and self.peek()[1] in {"+", "-"}:
             op = self.advance()
             semitones = self.match("NUMBER")
             if not semitones:
@@ -87,8 +100,6 @@ class Parser:
         if not semicolon or semicolon[1] != ";":
             raise SyntaxError(f"Expected ';' at the end of 'play' statement, found {self.peek()}.")
 
-        print(f"Debug: Successfully consumed semicolon after 'play' statement.")
-
         return {
             "type": "Play",
             "target": target[1],
@@ -96,6 +107,72 @@ class Parser:
             "modifier": modifier,
             "operation": operation,
         }
+    
+    def parse_notation_body(self):
+        body = []
+        while not self.check("CLOSE_BLOCK") and not self.is_at_end():
+            try:
+                stmt = self.statement()
+                if stmt is not None:
+                    body.append(stmt)
+            except SyntaxError as e:
+                print(f"Debug: {str(e)}. Skipping token {self.peek()}.")
+                self.advance()  
+        self.consume("CLOSE_BLOCK", "Expected '}' to close notation block.")
+        return body
+    
+    def notation_statement(self):
+        name = self.consume("IDENTIFIER", "Expected notation name after 'notation'.")
+        self.consume("OTHER", "Expected '(' after notation name.")
+        args = self.parse_arguments()
+        self.consume("OTHER", "Expected ')' after notation arguments.")
+        self.consume("OPEN_BLOCK", "Expected '{' to open notation body.")
+        body = self.parse_notation_body()
+        return {
+            "type": "Notation",
+            "name": name[1],
+            "arguments": args,
+            "body": body,
+        }
+
+
+
+    def script_statement(self):
+        self.match("IDENTIFIER")
+        name = self.match("IDENTIFIER")
+        if not name:
+            raise SyntaxError(f"Expected a notation name, found {self.peek()}.")
+
+        args = []
+        if self.match("OTHER") and self.peek()[1] == "(":
+            self.advance()
+            while True:
+                arg_type = self.match("NOTE", "IDENTIFIER")
+                if not arg_type:
+                    raise SyntaxError(f"Expected argument type, found {self.peek()}.")
+                arg_name = self.match("IDENTIFIER")
+                if not arg_name:
+                    raise SyntaxError(f"Expected argument name, found {self.peek()}.")
+
+                args.append({"type": arg_type[1], "name": arg_name[1]})
+                if self.peek()[1] == ")":
+                    self.advance()
+                    break
+                elif self.peek()[1] == ",":
+                    self.match("OTHER")
+
+        if not self.match("OPEN_BLOCK"):
+            raise SyntaxError(f"Expected '{{' to start notation body, found {self.peek()}.")
+
+        body = []
+        while not self.match("CLOSE_BLOCK"):
+            try:
+                body.append(self.statement())
+            except SyntaxError as e:
+                print(f"Debug: Skipping invalid statement in notation body. Error: {e}")
+                self.advance()
+
+        return {"type": "Notation", "name": name[1], "arguments": args, "body": body}
 
     def repeat_statement(self):
         times = self.match("NUMBER")
@@ -107,16 +184,16 @@ class Parser:
         return {"type": "Repeat", "times": int(times[1]), "body": body}
 
     def script_statement(self):
-        self.match("IDENTIFIER")
+        self.match("IDENTIFIER") 
         name = self.match("IDENTIFIER")
         if not name:
             raise SyntaxError(f"Expected a notation name, found {self.peek()}.")
 
-        print(f"Debug: Parsing notation '{name[1]}'")
+        print(f"Debug: Parsing notation '{name[1]}' with initial tokens: {self.tokens[self.current:self.current+5]}")
 
         args = []
-        if self.match("OTHER") and self.peek()[1] == "(":
-            self.advance()
+        if self.peek()[1] == "(":
+            self.advance()  
             while True:
                 arg_type = self.match("NOTE", "IDENTIFIER")
                 if not arg_type:
@@ -128,19 +205,20 @@ class Parser:
 
                 args.append({"type": arg_type[1], "name": arg_name[1]})
 
-                if self.peek()[1] == ")":
-                    self.advance()
+                if self.peek()[1] == ")":  
+                    self.advance()  
                     break
                 elif self.peek()[1] == ",":
-                    self.match("OTHER")
+                    self.match()  
+                else:
+                    raise SyntaxError(f"Expected ',' or ')', found {self.peek()}.")
 
-            print(f"Debug: Completed parsing arguments: {args}")
-
-        print(f"Debug: Tokens ahead before '{{': {self.tokens[self.current:self.current+5]}")
+            print(f"Debug: Completed parsing arguments: {args}, next tokens: {self.tokens[self.current:self.current+5]}")
 
         while self.peek()[0] == "WHITESPACE":
-            print(f"Debug: Skipping whitespace before '{{'.")
             self.advance()
+
+        print(f"Debug: Tokens before '{{': {self.tokens[self.current:self.current+5]}")
 
         if not self.match("OPEN_BLOCK"):
             raise SyntaxError(f"Expected '{{' to start notation body, found {self.peek()}.")
@@ -155,12 +233,6 @@ class Parser:
 
         print(f"Debug: Completed parsing notation '{name[1]}'.")
         return {"type": "Notation", "name": name[1], "arguments": args, "body": body}
-
-    def advance(self):
-        token = self.tokens[self.current]
-        self.current += 1
-        print(f"Debug: Consumed token {token}")
-        return token
 
 if __name__ == "__main__":
     with open("program.ds", "r") as file:

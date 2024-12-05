@@ -32,8 +32,8 @@ def lexer(code):
             match = regex.match(code)
             if match:
                 lexeme = match.group(0)
-                print(f"Debug: Matched {token_type} -> {lexeme}")  # Debug output
-                if token_type != "WHITESPACE":  # Ignore whitespace
+                print(f"Debug: Matched {token_type} -> {lexeme}")  
+                if token_type != "WHITESPACE":  
                     tokens.append((token_type, lexeme))
                 code = code[len(lexeme):]
                 break
