@@ -5,3 +5,21 @@ note scale = ["C", "D", "E", "F", "G", "A", "B"];
 repeat 4 times {
     play scale;
 }
+
+play C //;
+play D --;
+play E;
+
+melody theme = ["C", "E", "G"];
+play theme;
+
+chord major = ["C", "E", "G"];
+play chord major;
+
+notation arpeggio(note base) {
+    play base;
+    play base + 2;
+    play base + 4;
+}
+
+arpeggio("C");

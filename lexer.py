@@ -5,13 +5,17 @@ TOKEN_TYPES = {
     "NOTE": r"note",
     "PLAY": r"play",
     "REPEAT": r"repeat",
+    "MELODY": r"melody", 
+    "CHORD": r"chord", 
+    "SHARP": r"//",  
+    "FLAT": r"--",
     "ASSIGN": r"=",
     "STRING": r"\"[A-Ga-g#]+\"",
     "LIST": r"\[.*?\]",
     "NUMBER": r"\d+",
     "IDENTIFIER": r"[a-zA-Z_]\w*",
-    "OPEN_BLOCK": r"\{",
-    "CLOSE_BLOCK": r"\}",
+    "OPEN_BLOCK": r"\{",         
+    "CLOSE_BLOCK": r"\}", 
     "WHITESPACE": r"\s+",
     "OTHER": r"."
 }
@@ -26,6 +30,7 @@ def lexer(code):
             match = regex.match(code)
             if match:
                 lexeme = match.group(0)
+                print(f"Debug: Matched {token_type} -> {lexeme}")  # Debug output
                 if token_type != "WHITESPACE":  # Ignore whitespace
                     tokens.append((token_type, lexeme))
                 code = code[len(lexeme):]
@@ -33,6 +38,7 @@ def lexer(code):
         if not match:
             raise SyntaxError(f"Unexpected character: {code[0]}")
     return tokens
+
 
 # Read the example D# file
 with open("program.ds", "r") as file:
