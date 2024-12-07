@@ -193,8 +193,12 @@ class Parser:
 
         args = []
         if self.peek()[1] == "(":
-            self.advance()  
+            self.advance()  # Consume the '('
             while True:
+                if self.peek()[1] == ")":  # If we encounter ')', end parsing
+                    self.advance()
+                    break
+
                 arg_type = self.match("NOTE", "IDENTIFIER")
                 if not arg_type:
                     raise SyntaxError(f"Expected argument type, found {self.peek()}.")
@@ -205,12 +209,9 @@ class Parser:
 
                 args.append({"type": arg_type[1], "name": arg_name[1]})
 
-                if self.peek()[1] == ")":  
-                    self.advance()  
-                    break
-                elif self.peek()[1] == ",":
-                    self.match()  
-                else:
+                if self.peek()[1] == ",":
+                    self.advance()  # Consume ',' and continue to the next argument
+                elif self.peek()[1] != ")":
                     raise SyntaxError(f"Expected ',' or ')', found {self.peek()}.")
 
             print(f"Debug: Completed parsing arguments: {args}, next tokens: {self.tokens[self.current:self.current+5]}")
