@@ -184,51 +184,46 @@ class Parser:
         return {"type": "Repeat", "times": int(times[1]), "body": body}
 
     def script_statement(self):
-        self.match("IDENTIFIER") 
+        self.match("IDENTIFIER")  # Consume 'notation'
         name = self.match("IDENTIFIER")
         if not name:
             raise SyntaxError(f"Expected a notation name, found {self.peek()}.")
 
-        print(f"Debug: Parsing notation '{name[1]}' with initial tokens: {self.tokens[self.current:self.current+5]}")
+        print(f"Debug: Parsing notation '{name[1]}'")
 
         args = []
-        if self.peek()[1] == "(":
-            self.advance()  # Consume the '('
+        if self.match("OTHER") and self.peek()[1] == "(":
+            self.advance()  # Consume '('
             while True:
-                if self.peek()[1] == ")":  # If we encounter ')', end parsing
-                    self.advance()
-                    break
-
                 arg_type = self.match("NOTE", "IDENTIFIER")
                 if not arg_type:
                     raise SyntaxError(f"Expected argument type, found {self.peek()}.")
-
                 arg_name = self.match("IDENTIFIER")
                 if not arg_name:
                     raise SyntaxError(f"Expected argument name, found {self.peek()}.")
 
                 args.append({"type": arg_type[1], "name": arg_name[1]})
 
-                if self.peek()[1] == ",":
-                    self.advance()  # Consume ',' and continue to the next argument
-                elif self.peek()[1] != ")":
-                    raise SyntaxError(f"Expected ',' or ')', found {self.peek()}.")
+                if self.peek()[1] == ")":  # End of arguments
+                    self.advance()  # Consume ')'
+                    break
+                elif self.peek()[1] == ",":
+                    self.match("OTHER")  # Consume ','
 
-            print(f"Debug: Completed parsing arguments: {args}, next tokens: {self.tokens[self.current:self.current+5]}")
-
-        while self.peek()[0] == "WHITESPACE":
+        # Skip extraneous tokens (e.g., WHITESPACE) until '{' is encountered
+        while self.peek()[0] in ["WHITESPACE", "OTHER"] and self.peek()[1] not in ["{"]:
+            print(f"Debug: Skipping token {self.peek()} before '{{'.")
             self.advance()
 
-        print(f"Debug: Tokens before '{{': {self.tokens[self.current:self.current+5]}")
-
-        if not self.match("OPEN_BLOCK"):
+        # Match the opening block
+        if not self.match("OPEN_BLOCK"):  # Expect '{'
             raise SyntaxError(f"Expected '{{' to start notation body, found {self.peek()}.")
 
         body = []
         while not self.match("CLOSE_BLOCK"):
             print(f"Debug: Parsing body statement. Next token: {self.peek()}")
             if self.peek()[0] == "PLAY":
-                body.append(self.play_statement())
+                body.append(self.play_statement())  # Parse play statements correctly
             else:
                 body.append(self.statement())
 
